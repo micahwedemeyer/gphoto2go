@@ -192,6 +192,7 @@ type cameraFileReader struct {
 	fileName string
 	fullSize uint64
 	offset   uint64
+	closed   bool
 
 	cCameraFile *C.CameraFile
 	cBuffer     *C.char
@@ -200,6 +201,10 @@ type cameraFileReader struct {
 }
 
 func (cfr *cameraFileReader) Read(p []byte) (int, error) {
+	if cfr.closed {
+		return 0, io.ErrClosedPipe
+	}
+
 	n := uint64(len(p))
 
 	if n == 0 {
@@ -241,8 +246,11 @@ func (cfr *cameraFileReader) Read(p []byte) (int, error) {
 }
 
 func (cfr *cameraFileReader) Close() error {
-	// If I understand correctly, freeing the CameraFile will also free the data buffer (ie. cfr.cBuffer)
-	C.gp_file_free(cfr.cCameraFile)
+	if !cfr.closed {
+		// If I understand correctly, freeing the CameraFile will also free the data buffer (ie. cfr.cBuffer)
+		C.gp_file_free(cfr.cCameraFile)
+		cfr.closed = true
+	}
 	return nil
 }
 
@@ -252,6 +260,7 @@ func (c *Camera) FileReader(folder string, fileName string) io.ReadCloser {
 	cfr.folder = folder
 	cfr.fileName = fileName
 	cfr.offset = 0
+	cfr.closed = false
 
 	cFileName := C.CString(cfr.fileName)
 	cFolderName := C.CString(cfr.folder)
