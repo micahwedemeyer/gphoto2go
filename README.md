@@ -30,7 +30,7 @@ The main goal with this library is to present a Go-friendly interface to the C m
 
 ### Camera Initializing
 
-    camera := new(gphoto2.Camera)
+    camera := new(gphoto2go.Camera)
     err := camera.Init()
 
 
@@ -44,9 +44,12 @@ This will trigger the camera.
 
 ### Downloading the Photos from the Camera
 
-    cameraFileReader := camera.BufferedFileReader("/store_00020001/DCIM/100CANON", "IMG_8085.JPG")
+    cameraFileReader := camera.FileReader("/store_00020001/DCIM/100CANON", "IMG_8085.JPG")
     fileWriter := os.Create("/tmp/myfile.jpg")
     io.Copy(fileWriter, cameraFileReader)
+    
+    // Important, since there is memory used in the transfer that needs to be freed up
+    cameraFileReader.Close()
 
 ### Interpreting errors
 
@@ -55,5 +58,5 @@ into a human readable string.
 
     err := camera.TriggerCapture()
     if err < 0 {
-        fmt.Printf(gphoto2.CameraResultToString(err))
+        fmt.Printf(gphoto2go.CameraResultToString(err))
     }

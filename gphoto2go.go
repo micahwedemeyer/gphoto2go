@@ -1,4 +1,4 @@
-package gphoto2
+package gphoto2go
 
 // #cgo CFLAGS: -I/Users/micah/Developer/include/gphoto2
 // #cgo LDFLAGS: -L/Users/micah/Developer/lib -lgphoto2
