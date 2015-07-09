@@ -35,17 +35,46 @@ func (c *Camera) TriggerCapture() int {
 	return int(err)
 }
 
-func (c *Camera) WaitForCameraEvent(timeout int, handler func(int, string)) {
+type CameraEventType int
+
+const (
+	EVENT_UKNOWN     CameraEventType = C.GP_EVENT_UNKNOWN
+	EVENT_TIMEOUT    CameraEventType = C.GP_EVENT_TIMEOUT
+	EVENT_FILE_ADDED CameraEventType = C.GP_EVENT_FILE_ADDED
+)
+
+type CameraEvent struct {
+	Type   CameraEventType
+	Folder string
+	File   string
+}
+
+func (c *Camera) AsyncWaitForEvent(timeout int) chan *CameraEvent {
 	var eventType C.CameraEventType
 	var vp unsafe.Pointer
-	err := C.gp_camera_wait_for_event(c.camera, C.int(timeout), &eventType, &vp, c.context)
+	defer C.free(vp)
 
-	if err < 0 {
-		fmt.Printf(CameraResultToString(int(err)))
+	ch := make(chan *CameraEvent)
+
+	go func() {
+		C.gp_camera_wait_for_event(c.camera, C.int(timeout), &eventType, &vp, c.context)
+		ch <- cCameraEventToGoCameraEvent(vp, eventType)
+	}()
+
+	return ch
+}
+
+func cCameraEventToGoCameraEvent(voidPtr unsafe.Pointer, eventType C.CameraEventType) *CameraEvent {
+	ce := new(CameraEvent)
+	ce.Type = CameraEventType(eventType)
+
+	if ce.Type == EVENT_FILE_ADDED {
+		cameraFilePath := (*C.CameraFilePath)(voidPtr)
+		ce.File = C.GoString((*C.char)(&cameraFilePath.name[0]))
+		ce.Folder = C.GoString((*C.char)(&cameraFilePath.folder[0]))
 	}
 
-	s := C.GoString((*C.char)(vp))
-	handler(int(eventType), s)
+	return ce
 }
 
 func (c *Camera) ListFolders(folder string) ([]string, int) {
@@ -145,8 +174,7 @@ func cameraListToMap(cameraList *C.CameraList) (map[string]string, int) {
 
 func (c *Camera) Model() (string, int) {
 	abilities, err := c.GetAbilities()
-	modelBytes := C.GoBytes(unsafe.Pointer(&abilities.model), 255)
-	model := string(modelBytes[:255])
+	model := C.GoString((*C.char)(&abilities.model[0]))
 
 	return model, err
 }
