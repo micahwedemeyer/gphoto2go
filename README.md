@@ -44,12 +44,16 @@ This will trigger the camera.
 
 ### Downloading the Photos from the Camera
 
-    cameraFileReader := camera.FileReader("/store_00020001/DCIM/100CANON", "IMG_8085.JPG")
-    fileWriter := os.Create("/tmp/myfile.jpg")
-    io.Copy(fileWriter, cameraFileReader)
-    
-    // Important, since there is memory used in the transfer that needs to be freed up
-    cameraFileReader.Close()
+    folders := camera.RListFolders("/")
+    for _, folder := range folders {
+        files, _ := camera.ListFiles(folder)
+        for _, fileName := range files {
+            cameraFileReader := camera.FileReader(folder, fileName)
+            fileWriter := os.Create("/tmp/" + fileName)
+            io.Copy(fileWriter, cameraFileReader)
+            
+            // Important, since there is memory used in the transfer that needs to be freed up
+            cameraFileReader.Close()
 
 ### Interpreting errors
 
