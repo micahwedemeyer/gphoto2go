@@ -6,10 +6,9 @@ package gphoto2
 // #include <stdlib.h>
 import "C"
 import "unsafe"
-import "fmt"
 import "strings"
 import "io"
-import "bufio"
+import "reflect"
 
 type Camera struct {
 	camera  *C.Camera
@@ -194,6 +193,9 @@ type cameraFileReader struct {
 	fullSize uint64
 	offset   uint64
 
+	cCameraFile *C.CameraFile
+	cBuffer     *C.char
+
 	buffer [fileReaderBufferSize]byte
 }
 
@@ -216,41 +218,35 @@ func (cfr *cameraFileReader) Read(p []byte) (int, error) {
 		toRead = n
 	}
 
-	cFileName := C.CString(cfr.fileName)
-	cFolderName := C.CString(cfr.folder)
-	defer C.free(unsafe.Pointer(cFileName))
-	defer C.free(unsafe.Pointer(cFolderName))
+	// From: https://code.google.com/p/go-wiki/wiki/cgo
+	// Turning C arrays into Go slices
+	sliceHeader := reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(cfr.cBuffer)),
+		Len:  int(cfr.fullSize),
+		Cap:  int(cfr.fullSize),
+	}
+	goSlice := *(*[]C.char)(unsafe.Pointer(&sliceHeader))
 
-	cBuffer := (*C.char)(C.malloc(C.size_t(toRead)))
-	defer C.free(unsafe.Pointer(cBuffer))
-
-	cOffset := C.uint64_t(cfr.offset)
-
-	cToRead := C.uint64_t(toRead)
-
-	err := C.gp_camera_file_read(cfr.camera.camera, cFolderName, cFileName, C.GP_FILE_TYPE_NORMAL, cOffset, cBuffer, &cToRead, cfr.camera.context)
-	if err < 0 {
-		fmt.Printf("File Read Error: %s\n", CameraResultToString(int(err)))
+	for i := uint64(0); i < toRead; i++ {
+		p[i] = byte(goSlice[cfr.offset+i])
 	}
 
-	amountRead := int(cToRead)
-
-	// Note: This is a double (triple?) buffering performance issue. It would be nice to write directly to the byte slice, but I'm not sure how to do that safely
-	bytes := C.GoBytes(unsafe.Pointer(cBuffer), C.int(amountRead))
-	for i, b := range bytes {
-		p[i] = b
-	}
-
-	cfr.offset += uint64(cToRead)
+	cfr.offset += toRead
 
 	if cfr.offset < cfr.fullSize {
-		return amountRead, nil
+		return int(toRead), nil
 	} else {
-		return amountRead, io.EOF
+		return int(toRead), io.EOF
 	}
 }
 
-func (c *Camera) FileReader(folder string, fileName string) io.Reader {
+func (cfr *cameraFileReader) Close() error {
+	// If I understand correctly, freeing the CameraFile will also free the data buffer (ie. cfr.cBuffer)
+	C.gp_file_free(cfr.cCameraFile)
+	return nil
+}
+
+func (c *Camera) FileReader(folder string, fileName string) io.ReadCloser {
 	cfr := new(cameraFileReader)
 	cfr.camera = c
 	cfr.folder = folder
@@ -262,18 +258,13 @@ func (c *Camera) FileReader(folder string, fileName string) io.Reader {
 	defer C.free(unsafe.Pointer(cFileName))
 	defer C.free(unsafe.Pointer(cFolderName))
 
-	var cCameraFileInfo C.CameraFileInfo
+	C.gp_file_new(&cfr.cCameraFile)
+	C.gp_camera_file_get(c.camera, cFolderName, cFileName, C.GP_FILE_TYPE_NORMAL, cfr.cCameraFile, c.context)
 
-	err := C.gp_camera_file_get_info(c.camera, cFolderName, cFileName, &cCameraFileInfo, c.context)
-	if err < 0 {
-		fmt.Printf("File Get Info Error: %s\n", CameraResultToString(int(err)))
-	}
+	var cSize C.ulong
+	C.gp_file_get_data_and_size(cfr.cCameraFile, &cfr.cBuffer, &cSize)
 
-	cfr.fullSize = uint64(cCameraFileInfo.file.size)
+	cfr.fullSize = uint64(cSize)
 
 	return cfr
-}
-
-func (c *Camera) BufferedFileReader(folder string, fileName string) io.Reader {
-	return bufio.NewReaderSize(c.FileReader(folder, fileName), fileReaderBufferSize)
 }
