@@ -1,7 +1,6 @@
 package gphoto2go
 
-// #cgo CFLAGS: -I/Users/micah/Developer/include/gphoto2
-// #cgo LDFLAGS: -L/Users/micah/Developer/lib -lgphoto2
+// #cgo pkg-config: libgphoto2
 // #include <gphoto2.h>
 // #include <stdlib.h>
 import "C"
