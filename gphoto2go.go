@@ -36,9 +36,9 @@ func (c *Camera) TriggerCapture() int {
 type CameraEventType int
 
 const (
-	EVENT_UKNOWN     CameraEventType = C.GP_EVENT_UNKNOWN
-	EVENT_TIMEOUT    CameraEventType = C.GP_EVENT_TIMEOUT
-	EVENT_FILE_ADDED CameraEventType = C.GP_EVENT_FILE_ADDED
+	EventUnknown   CameraEventType = C.GP_EVENT_UNKNOWN
+	EventTimeout   CameraEventType = C.GP_EVENT_TIMEOUT
+	EventFileAdded CameraEventType = C.GP_EVENT_FILE_ADDED
 )
 
 type CameraEvent struct {
@@ -66,7 +66,7 @@ func cCameraEventToGoCameraEvent(voidPtr unsafe.Pointer, eventType C.CameraEvent
 	ce := new(CameraEvent)
 	ce.Type = CameraEventType(eventType)
 
-	if ce.Type == EVENT_FILE_ADDED {
+	if ce.Type == EventFileAdded {
 		cameraFilePath := (*C.CameraFilePath)(voidPtr)
 		ce.File = C.GoString((*C.char)(&cameraFilePath.name[0]))
 		ce.Folder = C.GoString((*C.char)(&cameraFilePath.folder[0]))
@@ -239,9 +239,8 @@ func (cfr *cameraFileReader) Read(p []byte) (int, error) {
 
 	if cfr.offset < cfr.fullSize {
 		return int(toRead), nil
-	} else {
-		return int(toRead), io.EOF
 	}
+	return int(toRead), io.EOF
 }
 
 func (cfr *cameraFileReader) Close() error {
