@@ -2,16 +2,10 @@
 
 A more Go idiomatic interface to the gPhoto2 library.
 
-## Warning
-
-I'm not a great Golang programmer, so this could be a complete disaster. But, if you want to use the gPhoto2 library and you'd prefer to avoid sticking cgo references all over your main Go program, this library might help.
-
-I'm also not a great C programmer, having grown up with garbage collectors and other niceties. Therefore, this library will be riddled with memory leaks. I would appreciate any help in making it more memory efficient.
-
 ## Installation
 
 ```
-go get github.com/micahwedemeyer/gphoto2go
+go get github.com/charles-d-burton/gphoto2go
 ```
 
 ## Requirements
