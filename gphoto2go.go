@@ -4,14 +4,28 @@ package gphoto2go
 // #include <gphoto2.h>
 // #include <stdlib.h>
 import "C"
-import "unsafe"
+import (
+	"log"
+	"unsafe"
+)
 import "strings"
 import "io"
 import "reflect"
 
+const (
+	CAPTURE_IMAGE = C.GP_CAPTURE_IMAGE
+	CAPTURE_MOVIE = C.GP_CAPTURE_MOVIE
+	CAPTURE_SOUND = C.GP_CAPTURE_SOUND
+)
+
 type Camera struct {
 	camera  *C.Camera
 	context *C.GPContext
+}
+
+type CameraFilePath struct {
+	Name   string
+	Folder string
 }
 
 func (c *Camera) Init() int {
@@ -31,6 +45,17 @@ func (c *Camera) GetAbilities() (C.CameraAbilities, int) {
 func (c *Camera) TriggerCapture() int {
 	err := C.gp_camera_trigger_capture(c.camera, c.context)
 	return int(err)
+}
+
+func (c *Camera) TriggerCaptureToFile() (CameraFilePath, int) {
+	var path CameraFilePath
+	var _path C.CameraFilePath
+	err := C.gp_camera_capture(c.camera, CAPTURE_IMAGE, &_path, c.context)
+	path.Name = C.GoString(&_path.name[0])
+	path.Folder = C.GoString(&_path.folder[0])
+	log.Println(path.Name)
+	log.Println(path.Folder)
+	return path, int(err)
 }
 
 type CameraEventType int
