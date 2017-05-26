@@ -305,6 +305,7 @@ func (c *Camera) DeleteFile(folder, file string) int {
 	folderBytes := []byte(folder)
 	fileBytes := []byte(file)
 	//Convert the byte arrays into C pointers
+
 	folderPointer := (*C.char)(unsafe.Pointer(&folderBytes[0]))
 	filePointer := (*C.char)(unsafe.Pointer(&fileBytes[0]))
 	err := C.gp_camera_file_delete(c.camera, folderPointer, filePointer, c.context)
