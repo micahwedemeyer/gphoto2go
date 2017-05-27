@@ -36,6 +36,11 @@ func (c *Camera) Init() int {
 	return int(err)
 }
 
+func (c *Camera) Interrupt() {
+	err := C.gp_context_cancel(c.context)
+	log.Println(err)
+}
+
 func (c *Camera) GetAbilities() (C.CameraAbilities, int) {
 	var abilities C.CameraAbilities
 	err := C.gp_camera_get_abilities(c.camera, &abilities)
