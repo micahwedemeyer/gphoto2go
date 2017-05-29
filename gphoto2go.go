@@ -33,11 +33,13 @@ func (c *Camera) Init() int {
 
 	C.gp_camera_new(&c.camera)
 	err := C.gp_camera_init(c.camera, c.context)
+	log.Println("Camera Init")
 	return int(err)
 }
 
 func (c *Camera) Exit() int {
 	err := C.gp_camera_exit(c.camera, c.context)
+	log.Println("Camera Exit")
 	return int(err)
 }
 
