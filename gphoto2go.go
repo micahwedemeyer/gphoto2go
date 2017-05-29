@@ -36,6 +36,11 @@ func (c *Camera) Init() int {
 	return int(err)
 }
 
+func (c *Camera) Exit() int {
+	err := C.gp_camera_exit(c.camera, c.context)
+	return int(err)
+}
+
 func (c *Camera) Interrupt() {
 	err := C.gp_context_cancel(c.context)
 	log.Println(err)
