@@ -40,7 +40,7 @@ func (c *Camera) Exit() int {
 }
 
 func (c *Camera) Cancel() {
-	err := C.gp_context_cancel(c.context)
+	C.gp_context_cancel(c.context)
 }
 
 func (c *Camera) GetAbilities() (C.CameraAbilities, int) {
