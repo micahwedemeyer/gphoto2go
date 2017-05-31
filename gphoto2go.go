@@ -39,7 +39,7 @@ func (c *Camera) Exit() int {
 	return int(err)
 }
 
-func (c *Camera) Interrupt() {
+func (c *Camera) Cancel() {
 	err := C.gp_context_cancel(c.context)
 }
 
