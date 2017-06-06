@@ -5,13 +5,25 @@ package gphoto2go
 // #include <stdlib.h>
 import "C"
 import "unsafe"
+
 import "strings"
 import "io"
 import "reflect"
 
+const (
+	CAPTURE_IMAGE = C.GP_CAPTURE_IMAGE
+	CAPTURE_MOVIE = C.GP_CAPTURE_MOVIE
+	CAPTURE_SOUND = C.GP_CAPTURE_SOUND
+)
+
 type Camera struct {
 	camera  *C.Camera
 	context *C.GPContext
+}
+
+type CameraFilePath struct {
+	Name   string
+	Folder string
 }
 
 func (c *Camera) Init() int {
@@ -20,6 +32,15 @@ func (c *Camera) Init() int {
 	C.gp_camera_new(&c.camera)
 	err := C.gp_camera_init(c.camera, c.context)
 	return int(err)
+}
+
+func (c *Camera) Exit() int {
+	err := C.gp_camera_exit(c.camera, c.context)
+	return int(err)
+}
+
+func (c *Camera) Cancel() {
+	C.gp_context_cancel(c.context)
 }
 
 func (c *Camera) GetAbilities() (C.CameraAbilities, int) {
@@ -31,6 +52,15 @@ func (c *Camera) GetAbilities() (C.CameraAbilities, int) {
 func (c *Camera) TriggerCapture() int {
 	err := C.gp_camera_trigger_capture(c.camera, c.context)
 	return int(err)
+}
+
+func (c *Camera) TriggerCaptureToFile() (CameraFilePath, int) {
+	var path CameraFilePath
+	var _path C.CameraFilePath
+	err := C.gp_camera_capture(c.camera, CAPTURE_IMAGE, &_path, c.context)
+	path.Name = C.GoString(&_path.name[0])
+	path.Folder = C.GoString(&_path.folder[0])
+	return path, int(err)
 }
 
 type CameraEventType int
@@ -274,4 +304,15 @@ func (c *Camera) FileReader(folder string, fileName string) io.ReadCloser {
 	cfr.fullSize = uint64(cSize)
 
 	return cfr
+}
+
+func (c *Camera) DeleteFile(folder, file string) int {
+	folderBytes := []byte(folder)
+	fileBytes := []byte(file)
+	//Convert the byte arrays into C pointers
+
+	folderPointer := (*C.char)(unsafe.Pointer(&folderBytes[0]))
+	filePointer := (*C.char)(unsafe.Pointer(&fileBytes[0]))
+	err := C.gp_camera_file_delete(c.camera, folderPointer, filePointer, c.context)
+	return int(err)
 }
