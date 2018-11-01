@@ -20,6 +20,9 @@ type Camera struct {
 	camera  *C.Camera
 	context *C.GPContext
 }
+type CameraFile struct {
+	file *C.CameraFile
+}
 
 type CameraFilePath struct {
 	Name   string
@@ -315,4 +318,20 @@ func (c *Camera) DeleteFile(folder, file string) int {
 	filePointer := (*C.char)(unsafe.Pointer(&fileBytes[0]))
 	err := C.gp_camera_file_delete(c.camera, folderPointer, filePointer, c.context)
 	return int(err)
+}
+
+func (c *Camera) CapturePreview() (cf CameraFile, err int) {
+	C.gp_file_new(&cf.file)
+	err = int(C.gp_camera_capture_preview(
+		c.camera,
+		cf.file,
+		c.context))
+	getPreviewFile(&cf)
+	return cf, err
+
+}
+func getPreviewFile(file *CameraFile) {
+	var cSize C.ulong
+	var buf *C.char
+	C.gp_file_get_data_and_size(file.file, &buf, &cSize)
 }
